@@ -17,6 +17,7 @@ from keras.layers import Input, Add, Dense, Activation, ZeroPadding2D, BatchNorm
 from keras.initializers import glorot_uniform
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from VisCallback import DrawCallback
+from keras.utils import multi_gpu_model
 
 
 class ClassfiyNet(object):
@@ -134,6 +135,8 @@ class ClassfiyNet(object):
         X = Dense(self.classes, activation='softmax', name='fc' + str(self.classes),
                   kernel_initializer=glorot_uniform(seed=0))(X)
         model = Model(inputs=X_input, outputs=X, name='resnet_50')
+        model = multi_gpu_model(model,4)
+        model.summary()
         return model
 
     def vgg16(self):
@@ -181,6 +184,8 @@ class ClassfiyNet(object):
         X = Dense(4096, activation='relu', name='fc2')(X)
         X = Dense(self.classes, activation='softmax', name='predictions')(X)
         model = Model(inputs=X_input, outputs=X, name="vgg16")
+        model = multi_gpu_model(model,4)
+        model.summary()
         return model
 
     def your_net(self):
@@ -198,11 +203,12 @@ class ClassfiyNet(object):
         X = Flatten()(X)
         X = Dense(self.classes, activation='softmax', name='predictions')(X_input)
         model = Model(inputs=X_input, outputs=X, name="yournet")
+        model = multi_gpu_model(model,4)        
+        model.summary()
         # end your network #
         return model
 
-    def train_and_test_resnet(self, train_X, train_Y, test_X, test_Y, epochs=1, batch_size=1, network="res",
-                              runtime_plot=False):
+    def train_and_test_resnet(self, train_X, train_Y, test_X, test_Y, epochs=1, batch_size=1, network="res",runtime_plot=False):
         """
         train and test resnet performance on your data set,you can switch the net by init the network with {"res","vgg"}
         **Attention: if you implement your network you should afferent `network` parameters with bala(no mean str will be ok)**
@@ -221,13 +227,12 @@ class ClassfiyNet(object):
         else:
             self.model = self.your_net()
         self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-        drawCallback = DrawCallback(runtime_plot=runtime_plot)  # real-time loss curve
+        # drawCallback = DrawCallback(runtime_plot=runtime_plot)  # real-time loss curve not runable on amax
         tbCallBack = TensorBoard(log_dir='./Log', histogram_freq=0, write_graph=True,
                                  write_images=True)
-        checkpointCallBack = ModelCheckpoint('./Npy_data/waynehfut.hdf5', monitor='loss', verbose=1,
-                                             save_best_only=True)
+        checkpointCallBack = ModelCheckpoint('./Npy_data/waynehfut.hdf5', monitor='loss', verbose=1,save_best_only=True)
         self.model.fit(x=train_X, y=train_Y, batch_size=batch_size, epochs=epochs,
-                       callbacks=[checkpointCallBack,tbCallBack,drawCallback])
+                       callbacks=[checkpointCallBack,tbCallBack])
         preds = self.model.evaluate(x=test_X, y=test_X)
         return preds
 

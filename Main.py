@@ -28,5 +28,4 @@ logger.info("*** Start training net****")
 myNetworks = ClassfiyNet()
 train_X = train_X / 255
 test_X = test_X / 255
-myNetworks.train_and_test_resnet(train_X=train_X, train_Y=train_Y, test_X=test_X, test_Y=test_Y, network="res",
-                                 runtime_plot=True)
+myNetworks.train_and_test_resnet(train_X=train_X, train_Y=train_Y, test_X=test_X, test_Y=test_Y, network="res",epochs=20, batch_size=16,runtime_plot=True)
