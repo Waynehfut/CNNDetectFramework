@@ -13,7 +13,7 @@ __author__ = 'Wayne'
 
 from keras.models import *
 from keras.layers import Input, Add, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D, \
-    AveragePooling2D, MaxPooling2D
+    AveragePooling2D, MaxPooling2D,Dropout
 from keras.initializers import glorot_uniform
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from VisCallback import DrawCallback
@@ -82,10 +82,12 @@ class ClassfiyNet(object):
         X = Conv2D(F1, (1, 1), strides=(s, s), name=conv_name_base + '2a', kernel_initializer=glorot_uniform(seed=0))(X)
         X = BatchNormalization(axis=3, name=bn_name_base + '2a')(X)
         X = Activation('relu')(X)
+        X = Dropout(0.8)(X)
         X = Conv2D(F2, (f, f), strides=(1, 1), padding='same', name=conv_name_base + '2b',
                    kernel_initializer=glorot_uniform(seed=0))(X)
         X = BatchNormalization(axis=3, name=bn_name_base + '2b')(X)
         X = Activation('relu')(X)
+        X = Dropout(0.8)(X)
         X = Conv2D(F3, (1, 1), strides=(1, 1), name=conv_name_base + '2c', kernel_initializer=glorot_uniform(seed=0))(X)
         X = BatchNormalization(axis=3, name=bn_name_base + '2c')(X)
         X_shortcut = Conv2D(F3, (1, 1), strides=(s, s), name=conv_name_base + '1',
@@ -137,6 +139,7 @@ class ClassfiyNet(object):
         model = Model(inputs=X_input, outputs=X, name='resnet_50')
         model = multi_gpu_model(model,4)
         model.summary()
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         return model
 
     def vgg16(self):
@@ -152,40 +155,39 @@ class ClassfiyNet(object):
         """
         X_input = Input(self.shape)
         # Block 1
-        X = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv1')(X_input)
-        X = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv2')(X)
+        X = Conv2D(16, (3, 3), activation='relu', padding='same', name='block1_conv1')(X_input)
+        X = Conv2D(16, (3, 3), activation='relu', padding='same', name='block1_conv2')(X)
         X = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(X)
 
         # Block 2
-        X = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv1')(X)
-        X = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv2')(X)
+        X = Conv2D(32, (5, 5), activation='relu', padding='same', name='block2_conv1')(X)
+        X = Conv2D(32, (5, 5), activation='relu', padding='same', name='block2_conv2')(X)
         X = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(X)
 
         # Block 3
-        X = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv1')(X)
-        X = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv2')(X)
-        X = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv3')(X)
+        X = Conv2D(16, (3, 3), activation='relu', padding='same', name='block3_conv1')(X)
+        X = Conv2D(16, (3, 3), activation='relu', padding='same', name='block3_conv2')(X)
+        X = Conv2D(16, (3, 3), activation='relu', padding='same', name='block3_conv3')(X)
         X = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(X)
 
-        # Block 4
-        X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv1')(X)
-        X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv2')(X)
-        X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv3')(X)
-        X = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(X)
+        # # Block 4
+        # X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv1')(X)
+        # X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv2')(X)
+        # X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv3')(X)
+        # X = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(X)
 
         # Block 5
-        X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv1')(X)
-        X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv2')(X)
-        X = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv3')(X)
-        X = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(X)
-
+        # X = Conv2D(256, (3, 3), activation='relu', padding='same', name='block5_conv1')(X)
+        # X = Conv2D(256, (3, 3), activation='relu', padding='same', name='block5_conv2')(X)
+        # X = Conv2D(256, (3, 3), activation='relu', padding='same', name='block5_conv3')(X)
+        # X = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(X)
         X = Flatten(name='flatten')(X)
-        X = Dense(4096, activation='relu', name='fc1')(X)
-        X = Dense(4096, activation='relu', name='fc2')(X)
+        # X = Dense(2, activation='relu', name='fc1')(X)
         X = Dense(self.classes, activation='softmax', name='predictions')(X)
         model = Model(inputs=X_input, outputs=X, name="vgg16")
         model = multi_gpu_model(model,4)
         model.summary()
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         return model
 
     def your_net(self):
@@ -195,16 +197,22 @@ class ClassfiyNet(object):
         """
         X_input = Input(self.shape)
         # start your network #
-        X = ZeroPadding2D((3, 3))(X_input)
-        X = Conv2D(32, (7, 7), strides=(1, 1), name='conv0')(X)
+        X = Conv2D(32, (7, 7), strides=(1, 1), name='conv0')(X_input)
+        # X = Conv2D(64, (3, 3), strides=(1, 1), padding='same', activation='relu', kernel_initializer='uniform')(X)
+        X = BatchNormalization(axis=3, name='bn0')(X)
+        X = Activation('relu')(X)
+        X = Dropout(0.5)(X)
+        X = Conv2D(32, (7, 7), strides=(1, 1), name='conv0')(X_input)
+        # X = Conv2D(64, (3, 3), strides=(1, 1), padding='same', activation='relu', kernel_initializer='uniform')(X)
         X = BatchNormalization(axis=3, name='bn0')(X)
         X = Activation('relu')(X)
         X = MaxPooling2D((2, 2), name='max_pool')(X)
         X = Flatten()(X)
-        X = Dense(self.classes, activation='softmax', name='predictions')(X_input)
+        X = Dense(self.classes, activation='softmax', name='predictions')(X)
         model = Model(inputs=X_input, outputs=X, name="yournet")
-        model = multi_gpu_model(model,4)        
+        # model = multi_gpu_model(model,4)
         model.summary()
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         # end your network #
         return model
 
@@ -226,14 +234,13 @@ class ClassfiyNet(object):
             self.model = self.vgg16()
         else:
             self.model = self.your_net()
-        self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         # drawCallback = DrawCallback(runtime_plot=runtime_plot)  # real-time loss curve not runable on amax
-        tbCallBack = TensorBoard(log_dir='./Log', histogram_freq=0, write_graph=True,
-                                 write_images=True)
+        tbCallBack = TensorBoard(log_dir='./Log')
         checkpointCallBack = ModelCheckpoint('./Npy_data/waynehfut.hdf5', monitor='loss', verbose=1,save_best_only=True)
         self.model.fit(x=train_X, y=train_Y, batch_size=batch_size, epochs=epochs,
                        callbacks=[checkpointCallBack,tbCallBack])
-        preds = self.model.evaluate(x=test_X, y=test_X)
+        preds = self.model.evaluate(x=test_X, y=test_Y,batch_size=batch_size)
+        print(preds)
         return preds
 
     def val_test(self, inputdata, network="res"):

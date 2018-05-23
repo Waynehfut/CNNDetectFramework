@@ -17,7 +17,7 @@ import glob
 from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
 from sklearn.model_selection import train_test_split
 from LogUtils import LogUtils
-
+import os
 logger = LogUtils()
 
 
@@ -36,7 +36,7 @@ class ImageUtils(object):
         self.test_label_path = ""  # test label path
         self.log_path = ""  # output log
         self.output_path = ""  # output path
-        self.img_path = "Data_test"  # img path
+        self.img_path = "Data"  # img path
         self.img_type = 'jpg'
         self.generate_dic = ImageDataGenerator(  # generator for data-sets
             rotation_range=0.2,
@@ -73,26 +73,31 @@ class ImageUtils(object):
         class_label = 0
         img_t = None
         img_l = None
-        for class_i in classes:
-            self.class_i = glob.glob(self.img_path + '/' + class_i + '/images/*.' + self.img_type)
-            for item in self.class_i:
-                if img_t is None:
-                    img_t = np.array(img_to_array(load_img(item)))[np.newaxis]
-                else:
-                    img_t = np.append(img_t, img_to_array(load_img(item))[np.newaxis], axis=0)
-                if img_l is None:
-                    img_l = np.array([class_label])
-                else:
-                    img_l = np.append(img_l, np.array([class_label]), axis=0)
-            class_label += 1
-        img_l = img_l.reshape((1, img_l.shape[0]))
-        img_l = self.convert_to_one_hot(img_l, 2).T
+        if not os.path.exists('./Npy_data/imgs.npy'):
+            for class_i in classes:
+                self.class_i = glob.glob(self.img_path + '/' + class_i + '/images/*.' + self.img_type)
+                for item in self.class_i:
+                    print(item)
+                    if img_t is None:
+                        img_t = np.array(img_to_array(load_img(item)))[np.newaxis]
+                    else:
+                        img_t = np.append(img_t, img_to_array(load_img(item))[np.newaxis], axis=0)
+                    if img_l is None:
+                        img_l = np.array([class_label])
+                    else:
+                        img_l = np.append(img_l, np.array([class_label]), axis=0)
+                class_label += 1
+            img_l = img_l.reshape((1, img_l.shape[0]))
+            img_l = self.convert_to_one_hot(img_l, 2).T
+            np.save('Npy_data' + '/imgs.npy', img_t)
+            np.save('Npy_data' + '/labels.npy', img_l)
+            logger.info("***\tsaved img and labels\t***")
+        else:
+            img_t = np.load('./Npy_data/imgs.npy')
+            img_l = np.load('./Npy_data/labels.npy')
 
         logger.info("{0},{1}".format(img_t.shape, img_l.shape))
         logger.info("***\tloaded img\t***")
-        np.save('Npy_data' + '/imgs.npy', img_t)
-        np.save('Npy_data' + '/labels.npy', img_l)
-        logger.info("***\tsaved img and labels\t***")
         logger.info("{0} will be set for training set\n{1} will be set for test set\n".format(1 - test_size,
                                                                                               test_size))
 
